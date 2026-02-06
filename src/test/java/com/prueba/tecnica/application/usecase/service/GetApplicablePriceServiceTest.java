@@ -12,9 +12,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,50 +31,47 @@ class GetApplicablePriceServiceTest {
     private Long productId;
     private Long brandId;
     private LocalDateTime applicationDate;
-    private Price expectedPrice;
 
     @BeforeEach
     void setUp() {
         productId = 35455L;
         brandId = 1L;
         applicationDate = LocalDateTime.of(2024, 6, 14, 10, 0);
-
-        expectedPrice = Price.builder()
-                .productId(productId)
-                .brandId(brandId)
-                .priceList(1L)
-                .startDate(LocalDateTime.of(2024, 6, 14, 0, 0))
-                .endDate(LocalDateTime.of(2024, 12, 31, 23, 59, 59))
-                .price(new BigDecimal("35.50"))
-                .currency("EUR")
-                .build();
     }
 
     @Test
-    void shouldReturnPriceWhenApplicablePriceExists() {
+    void ShouldReturnPriceWithHighestPriority() {
+        Price lowPriorityPrice = createPrice(1L, 0, new BigDecimal("35.50"));
+        Price highPriorityPrice = createPrice(2L, 1, new BigDecimal("25.45"));
+
         when(priceRepository.getApplicablePrice(productId, brandId, applicationDate))
-                .thenReturn(Optional.of(expectedPrice));
+                .thenReturn(List.of(lowPriorityPrice, highPriorityPrice));
 
         Price result = service.execute(productId, brandId, applicationDate);
 
-        assertNotNull(result);
-        assertEquals(expectedPrice.getProductId(), result.getProductId());
-        assertEquals(expectedPrice.getBrandId(), result.getBrandId());
-        assertEquals(expectedPrice.getPriceList(), result.getPriceList());
-        assertEquals(expectedPrice.getPrice(), result.getPrice());
-        assertEquals(expectedPrice.getCurrency(), result.getCurrency());
-
+        assertThat(result).isEqualTo(highPriorityPrice);
+        assertThat(result.getPriority()).isEqualTo(1);
     }
 
     @Test
     void shouldThrowPriceNotFoundException() {
         when(priceRepository.getApplicablePrice(productId, brandId, applicationDate))
-                .thenReturn(Optional.empty());
+                .thenReturn(Collections.emptyList());
 
-        PriceNotFoundException exception = assertThrows(
-                PriceNotFoundException.class,
-                () -> service.execute(productId, brandId, applicationDate)
-        );
-        assertTrue(exception.getMessage().contains("No applicable price found"));
+        assertThatThrownBy(() -> service.execute(productId, brandId, applicationDate))
+                .isInstanceOf(PriceNotFoundException.class);
+    }
+
+    private Price createPrice(Long id, Integer priority, BigDecimal priceValue) {
+        return Price.builder()
+                .id(id)
+                .brandId(brandId)
+                .productId(productId)
+                .priority(priority)
+                .price(priceValue)
+                .currency("EUR")
+                .startDate(applicationDate.minusDays(1))
+                .endDate(applicationDate.plusDays(1))
+                .build();
     }
 }

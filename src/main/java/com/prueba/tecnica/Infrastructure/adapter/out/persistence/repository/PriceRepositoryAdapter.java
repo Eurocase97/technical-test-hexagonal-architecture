@@ -7,7 +7,9 @@ import com.prueba.tecnica.domain.ports.out.PriceRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 public class PriceRepositoryAdapter implements PriceRepository {
@@ -21,8 +23,8 @@ public class PriceRepositoryAdapter implements PriceRepository {
     }
 
     @Override
-    public Optional<Price> getApplicablePrice(Long productId, Long brandId, LocalDateTime applicationDate) {
-        Optional<PriceEntity> priceResult =  jpaRepository.findApplicablePrice(productId, brandId, applicationDate);
-        return priceResult.map(mapper::toDomain);
+    public  List<Price> getApplicablePrice(Long productId, Long brandId, LocalDateTime applicationDate) {
+        List<PriceEntity> priceResult =  jpaRepository.findApplicablePrice(productId, brandId, applicationDate);
+        return priceResult.stream().map(mapper::toDomain).toList();
     }
 }

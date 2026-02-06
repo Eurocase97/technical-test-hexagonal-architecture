@@ -8,7 +8,9 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -23,11 +25,9 @@ public class GetApplicablePriceService implements GetApplicablePriceUseCase {
 
     @Override
     public Price execute(Long productId, Long brandId, LocalDateTime applicationDate) {
-        return priceRepository
-                .getApplicablePrice(productId, brandId, applicationDate)
-                .orElseThrow(() -> new PriceNotFoundException(
-                        String.format("No applicable price found for product %d, brand %d at %s",
-                                productId, brandId, applicationDate)
-                ));
+        List<Price> priceList = priceRepository.getApplicablePrice(productId, brandId, applicationDate);
+        Optional<Price> priceResult = priceList.stream().max(Comparator.comparing(Price::getPriority));
+        return priceResult.orElseThrow(() -> new PriceNotFoundException(
+                String.format("No applicable price found for product %d, brand %d at %s", productId, brandId, applicationDate)));
     }
 }
