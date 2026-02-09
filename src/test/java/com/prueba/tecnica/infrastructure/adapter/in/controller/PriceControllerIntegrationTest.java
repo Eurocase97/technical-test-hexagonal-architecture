@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.is;
@@ -87,7 +88,7 @@ class PriceControllerIntegrationTest {
     }
 
     @Test
-    void shouldReturn400_WhenParamIsMissing() throws Exception {
+    void shouldReturn400WhenParamIsMissing() throws Exception {
         mockMvc.perform(get("/api/prices")
                         .param("brandId", "1")
                         .param("applicationDate", "2020-06-14T10:00:00"))
@@ -95,12 +96,23 @@ class PriceControllerIntegrationTest {
     }
 
     @Test
-    void shouldReturn400_WhenParamIsInvalid() throws Exception {
+    void shouldReturn400WhenParamIsInvalid() throws Exception {
         // When & Then
         mockMvc.perform(get("/api/prices")
                         .param("productId", "invalid")
                         .param("brandId", "1")
                         .param("applicationDate", "2020-06-14T10:00:00"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404WhenNotExistPrice() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/prices")
+                        .param("productId", "000111")
+                        .param("brandId", "1")
+                        .param("applicationDate", "2020-06-14T10:00:00"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("No applicable price found for product")));
     }
 }
